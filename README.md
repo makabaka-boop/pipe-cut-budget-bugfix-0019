@@ -21,7 +21,7 @@ docker compose up --build --exit-code-from verify
 
 ```bash
 go test ./...                 # 单元测试
-go run ./cmd/server           # 监听 :8080（PORT 环境变量可改）
+go run ./cmd/server           # 监听 :8080（PORT 环境变量可改；SHUTDOWN_TIMEOUT 可改排空窗口）
 go run ./cmd/verify           # 对 API_URL（默认 http://localhost:8080）做验收
 ```
 
@@ -61,6 +61,15 @@ curl -s -X POST http://localhost:8080/minimum-shutdown-cost \
 ### 健康检查
 
 `GET /healthz` → `200 {"status":"ok"}`
+
+## 优雅停机
+
+收到 `SIGTERM` 或 `SIGINT` 后，服务会立即关闭监听器（拒绝新请求），随后调用 HTTP Server 的 `Shutdown` 等待已有请求完成并写完响应。排空窗口由 `SHUTDOWN_TIMEOUT`（Go duration，默认 `15s`）控制：
+
+- 在窗口内完成排空：进程以 `0` 退出；
+- 超过窗口仍有在途请求：强制关闭剩余连接，进程以非 `0` 状态退出，避免把未完成的停机误报为成功。
+
+Compose 的 `stop_grace_period` 为 `20s`，略大于应用排空超时，确保先由应用报告排空失败，而不是被编排平台无条件 `SIGKILL`。镜像内置 `/healthz` 健康检查，供容器编排系统在滚动更新时摘除正在停机的实例。
 
 ## 输入约束与错误格式
 

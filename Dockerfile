@@ -15,6 +15,13 @@ USER app
 COPY --from=build /out/server /usr/local/bin/server
 EXPOSE 8080
 ENV PORT=8080
+# Give the process enough time to finish active calculations. The container
+# runtime's grace period must be longer than this so the application, rather
+# than SIGKILL, can report a drain timeout.
+ENV SHUTDOWN_TIMEOUT=15s
+HEALTHCHECK --interval=1s --timeout=1s --retries=30 \
+  CMD wget -q -O - http://127.0.0.1:8080/healthz || exit 1
+STOPSIGNAL SIGTERM
 ENTRYPOINT ["server"]
 
 # ---- verify stage: one-shot acceptance service --------------------------
