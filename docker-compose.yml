@@ -1,0 +1,25 @@
+services:
+  api:
+    build:
+      context: .
+      target: runtime
+    image: raincut-api
+    environment:
+      PORT: "8080"
+    ports:
+      # API_PORT selects the host port (default 8080).
+      - "${API_PORT:-8080}:8080"
+    restart: unless-stopped
+
+  # One-shot acceptance service: runs `go test ./...` and then the live
+  # black-box checks against the api service, and exits.
+  verify:
+    build:
+      context: .
+      target: verify
+    image: raincut-verify
+    depends_on:
+      - api
+    environment:
+      API_URL: http://api:8080
+    restart: "no"
