@@ -9,6 +9,9 @@ services:
     ports:
       # API_PORT selects the host port (default 8080).
       - "${API_PORT:-8080}:8080"
+    # The server drains in-flight requests for up to 10s after SIGTERM;
+    # leave headroom so Docker does not escalate to SIGKILL mid-drain.
+    stop_grace_period: 15s
     restart: unless-stopped
 
   # One-shot acceptance service: runs `go test ./...` and then the live

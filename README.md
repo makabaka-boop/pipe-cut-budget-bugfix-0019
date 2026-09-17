@@ -62,6 +62,15 @@ curl -s -X POST http://localhost:8080/minimum-shutdown-cost \
 
 `GET /healthz` → `200 {"status":"ok"}`
 
+## 优雅停机
+
+收到 `SIGTERM` / `SIGINT` 后，服务立即停止接收新连接，并等待在途计算完成（排空上限 10 秒）：
+
+- 在途请求全部在限时内完成 → 进程以退出码 `0` 结束；
+- 排空超时仍有请求未完成 → 进程以**非零退出码**结束（截断在途响应视为失败）。
+
+`docker-compose.yml` 中 `stop_grace_period: 15s` 为 10 秒排空窗口留出余量，避免 Docker 在排空完成前升级 `SIGKILL`。
+
 ## 输入约束与错误格式
 
 | 字段 | 约束 |
